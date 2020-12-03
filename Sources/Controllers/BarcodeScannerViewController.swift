@@ -33,6 +33,7 @@ public protocol BarcodeScannerDismissalDelegate: class {
  */
 open class BarcodeScannerViewController: UIViewController {
   private static let footerHeight: CGFloat = 75
+  public var hideFooterView = false
 
   // MARK: - Public properties
 
@@ -47,6 +48,10 @@ open class BarcodeScannerViewController: UIViewController {
   /// and waits for the next reset action.
   public var isOneTimeSearch = true
 
+    /// When the flag is set to `true` the screen is flashed on barcode scan.
+      /// Defaults to true.
+  public var shouldSimulateFlash = true
+    
   /// `AVCaptureMetadataOutput` metadata object types.
   public var metadata = AVMetadataObject.ObjectType.barcodeScannerMetadata {
     didSet {
@@ -102,7 +107,7 @@ open class BarcodeScannerViewController: UIViewController {
     cameraViewController.delegate = self
     add(childViewController: cameraViewController)
 
-    view.bringSubview(toFront: messageView)
+    view.bringSubviewToFront(messageView)
   }
 
   open override func viewWillAppear(_ animated: Bool) {
@@ -197,12 +202,19 @@ open class BarcodeScannerViewController: UIViewController {
    - Parameter processing: Flag to set the current state to `.processing`.
    */
   private func animateFlash(whenProcessing: Bool = false) {
+    guard shouldSimulateFlash else {
+        if whenProcessing {
+            self.status = Status(state: .processing)
+        }
+        return
+    }
+
     let flashView = UIView(frame: view.bounds)
     flashView.backgroundColor = UIColor.white
     flashView.alpha = 1
 
     view.addSubview(flashView)
-    view.bringSubview(toFront: flashView)
+    view.bringSubviewToFront(flashView)
 
     UIView.animate(
       withDuration: 0.2,
@@ -235,7 +247,7 @@ private extension BarcodeScannerViewController {
       cameraView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
       cameraView.bottomAnchor.constraint(
         equalTo: view.bottomAnchor,
-        constant: -BarcodeScannerViewController.footerHeight
+        constant: hideFooterView ? 0 : -BarcodeScannerViewController.footerHeight
       )
     )
 
@@ -272,7 +284,7 @@ private extension BarcodeScannerViewController {
       messageView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
       messageView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
       messageView.heightAnchor.constraint(
-        equalToConstant: BarcodeScannerViewController.footerHeight
+        equalToConstant: hideFooterView ? 0 : -BarcodeScannerViewController.footerHeight
       )
     ]
   }
@@ -303,8 +315,8 @@ extension BarcodeScannerViewController: CameraViewControllerDelegate {
 
   func cameraViewControllerDidTapSettingsButton(_ controller: CameraViewController) {
     DispatchQueue.main.async {
-      if let settingsURL = URL(string: UIApplicationOpenSettingsURLString) {
-        UIApplication.shared.openURL(settingsURL)
+      if let settingsURL = URL(string: UIApplication.openSettingsURLString) {
+        UIApplication.shared.open(settingsURL, options: [:], completionHandler: nil)
       }
     }
   }
